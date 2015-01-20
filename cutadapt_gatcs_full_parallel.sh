@@ -1,9 +1,9 @@
 #!/bin/bash
-FASTQ_FILES=/home/anton/backup/input/1540*.fastq.gz # расположение исходных файлов
+FASTQ_FILES=/home/anton/backup/input/*.fastq.gz # расположение исходных файлов
 FASTX_REVCOM=fastx_reverse_complement 
 DIR=/home/anton/backup/output # папка куда будет всё складываться
 #OUT=/home/anton/backup/output # папка куда будут перемещаться данные
-DSCR=/home/anton/data/damid_description.csv # расположение файла описаний
+DSCR=/home/anton/data/cutadapt/damid_description.csv # расположение файла описаний
 
 # Определяем адаптеры
 ADPTR_SHORT_5="GGTCGCGGCCGAG"
@@ -51,8 +51,8 @@ for fq in ${FASTQ_FILES}; do
 		s1_trim=`grep "Trimmed reads" $stats/clip_${fq_base%.fastq.gz}.stats | sed 's/^[a-zA-Z ^t:]*//;s/[%()0-9.]*$//;s/[ ^]*$//'`
 		s1_untrim=$((${s0_reads} - ${s1_trim}))
 
-		s2_trim_gatcs=$((`wc -l $basef/out_wo_adapt_gatcs_len9.fastq | sed 's/[a-zA-Z0-9_./-]*$//'`/4))
-		s2_untrim_trash_gatcs=$((`wc -l $basef/out_wo_adapt_wo_gatcs_small_len.fastq | sed 's/[a-zA-Z0-9_./-]*$//'`/4)) #!!!!!!!
+		s2_trim_gatcs=`grep "^\+$" $basef/out_wo_adapt_gatcs_len9.fastq | wc -l`
+		s2_untrim_trash_gatcs=`grep "^\+$" $basef/out_wo_adapt_wo_gatcs_small_len.fastq | wc -l`
 #s2_rem_too_short=`grep "Too short reads" $stats/clip_len9_${fq_base%.fastq.gz}.stats | sed 's/^[a-zA-Z ^t:]*//;s/[%)0-9.a-z ]*$//;s/[( ]*$//'`
 #s2_rem_match_reads=`grep "Matched reads" $stats/clip_len9_${fq_base%.fastq.gz}.stats | sed 's/^[a-zA-Z ^t:]*//;s/[%()0-9.]*$//;s/[ ^]*$//'`
 		s2_trash_reads=$(($s1_trim-$s2_trim_gatcs))
@@ -126,7 +126,7 @@ for fq in ${FASTQ_FILES}; do
 		grep -E -v '.+(GATC)+.+' $basef/interim_gatcs_${fq_base}.fastq | sed "/^$pre/ { N; /\n+/ { N; d } }" > $basef/summary_gatcs_${fq_base}.fastq
 
 # Объявление итоговых результатов и подстчет процентов
-		s4_interim_gatcs=$((`wc -l $basef/interim_gatcs_${fq_base}.fastq | sed 's/[a-zA-Z0-9_./-]*$//'`/4))
+		s4_interim_gatcs=`grep "^\+$" $basef/interim_gatcs_${fq_base}.fastq | wc -l`
 		s4_interim_gatcs_pct=`bc <<< "scale=4; a=$s0_reads; b=$s4_interim_gatcs; (b/a)*100" | sed 's/[0].$//'`%
 
 		s4_interim_trash_reads=$((${s3_input_trim_reads}+${s3_input_untrim_reads}+${s2_trash_reads}-${s3_match_trim_reads}-${s3_match_untrim_reads}))
@@ -135,7 +135,7 @@ for fq in ${FASTQ_FILES}; do
 		s3_html_trim=`cat $stats/len9.txt`
 		s3_html_untrim=`cat $stats/orig_len.txt`
 
-		s5_summary_gatcs=$((`wc -l $basef/summary_gatcs_${fq_base}.fastq | sed 's/[a-zA-Z0-9_./-]*$//'`/4))
+		s5_summary_gatcs=`grep "^\+$" $basef/summary_gatcs_${fq_base}.fastq | wc -l`
 		s5_summary_gatcs_pct=`bc <<< "scale=4; a=$s0_reads; b=$s5_summary_gatcs; (b/a)*100" | sed 's/[0].$//'`%
 
 		s5_trash_reads=$((${s4_interim_trash_reads}+${s5_summary_gatcs}-${s4_interim_gatcs}))
@@ -282,4 +282,3 @@ for fq in ${FASTQ_FILES}; do
 } &
 done
 wait
-
