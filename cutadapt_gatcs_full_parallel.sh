@@ -86,9 +86,9 @@ for fq in ${FASTQ_FILES}; do
 
 # Запуск цикла в котором идет поиск фрагментов GATC отстоящих от края рида на 1, 2, 3 и так далее до 9-ти оснований
 		while [ $count -le 13 ]; do # 4 + 9 = 13 длина короткого адаптера 
-			i=$((13-$((${count}-4)))) # start from 12 Считаю число оснований, которые нужно удалить от оригинального адаптера
-				adptr5=`echo $ADPTR_SHORT_5 | sed -e 's/^.\{'$i'\}//'` # Удаляю основания от адаптера с 5' конца
-	adptr3=`echo $ADPTR_SHORT_3 | sed -e 's/.\{'$i'\}$//'` # Удаляю основания от адаптера с 3' конца
+		i=$((13-$((${count}-4)))) # start from 12 Считаю число оснований, которые нужно удалить от оригинального адаптера
+		adptr5=`echo $ADPTR_SHORT_5 | sed -e 's/^.\{'$i'\}//'` # Удаляю основания от адаптера с 5' конца
+		adptr3=`echo $ADPTR_SHORT_3 | sed -e 's/.\{'$i'\}$//'` # Удаляю основания от адаптера с 3' конца
 
 # search gatcs from reads w/o adapters, with gatcs, length >= 9. Поиск отстоящих GATC фрагментов на ридах без адаптеров, длиной не менее 9 оснований
 		cutadapt -g "^${adptr5}GATC" -a "GATC${adptr3}$" -O $count -e 0.01 --no-trim --untrimmed-output $len9/inner$((${count}-4))-gatcs.fastq $len9/inner$((${count}-5))-gatcs.fastq -o $len9/output$((${count}-4))-gatcs.fastq > $stats/clip_len9_gatcs${count}.stats
@@ -123,8 +123,9 @@ for fq in ${FASTQ_FILES}; do
 
 # Удаление внутренних ридов в файле с краевыми GATC's
 		pre=`head -n 1 $basef/interim_gatcs_${fq_base}.fastq | cut -c 1-2`
-		grep -E -v '.+(GATC)+.+' $basef/interim_gatcs_${fq_base}.fastq | sed '/^[-].*$/d' | sed ":loop; N; /\n+/ ! { $ ! b loop }; /\n${pre}[^\n]\+\n+/ d" > $basef/summary_gatcs_${fq_base}.fastq
+		grep -E -v '.+(GATC)+.+' $basef/interim_gatcs_${fq_base}.fastq | sed "/^$pre/ { N; /\n+/ { N; d } }" > $basef/summary_gatcs_${fq_base}.fastq
 
+# Объявление итоговых результатов и подстчет процентов
 		s4_interim_gatcs=$((`wc -l $basef/interim_gatcs_${fq_base}.fastq | sed 's/[a-zA-Z0-9_./-]*$//'`/4))
 		s4_interim_gatcs_pct=`bc <<< "scale=4; a=$s0_reads; b=$s4_interim_gatcs; (b/a)*100" | sed 's/[0].$//'`%
 
