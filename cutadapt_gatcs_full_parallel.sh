@@ -138,7 +138,7 @@ for fq in ${FASTQ_FILES}; do
 		s5_summary_gatcs=`grep "^\+$" $basef/summary_gatcs_${fq_base}.fastq | wc -l`
 		s5_summary_gatcs_pct=`bc <<< "scale=4; a=$s0_reads; b=$s5_summary_gatcs; (b/a)*100" | sed 's/[0].$//'`%
 
-		s5_trash_reads=$((${s4_interim_trash_reads}+${s5_summary_gatcs}-${s4_interim_gatcs}))
+		s5_trash_reads=$((${s4_interim_gatcs}-${s5_summary_gatcs}+${s4_interim_trash_reads}))
 		s5_trash_reads_pct=`bc <<< "scale=4; a=$s0_reads; b=$s5_trash_reads; (b/a)*100" | sed 's/[0].$//'`%
 
 		echo "
