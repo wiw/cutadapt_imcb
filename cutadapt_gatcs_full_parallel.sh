@@ -242,15 +242,15 @@ for fq in ${FASTQ_FILES}; do
 		<div class=\"alert\">Interim report</div>
 		<div class=\"span4\">
 		<h4 align=\"center\"><script>document.write(number_format(${s2_untrim}, 0, '.', ' '))</script> inner reads (${s2_untrim_pct})</h4>
-		<p align=\"center\">original length<\br>without GATC</p>
+		<p align=\"center\"><ul><li>original length</li><li>without GATC</li></ul></p>
 		</div>
 		<div class=\"span4\" style=\"background-color: #448f30\">
 		<h4 align=\"center\"><script>document.write(number_format(${s4_interim_gatcs}, 0, '.', ' '))</script> edge reads (${s4_interim_gatcs_pct})</h4>
-		<p align=\"center\">original length with edge GATC(s) & truncated<\br>with GATC(s) at the edge(s)</p>
+		<p align=\"center\"><ul><li>original length with edge GATC(s) & truncated</li><li>with GATC(s) at the edge(s)</li></ul></p>
 		</div>
 		<div class=\"span4\" style=\"color: #f10026\">
 		<h4 align=\"center\"><script>document.write(number_format(${s4_interim_trash_reads}, 0, '.', ' '))</script> trash reads (${s4_interim_trash_reads_pct})</h4>
-		<p align=\"center\">too short after removal of adapters<\br>no GATC(s) after removal of adapters<\br>contain inner GATS(s)</p>
+		<p align=\"center\"><ul><li>too short after removal of adapters</li><li>no GATC(s) after removal of adapters</li><li>contain inner GATS(s)</li></ul></p>
 		</div>
 		</div>
 		<p>&nbsp;</p>
@@ -258,15 +258,15 @@ for fq in ${FASTQ_FILES}; do
 		<div class=\"alert\">Removing  reads with inner GATC(s)</div>
 		<div class=\"span4\">
 		<h4 align=\"center\"><script>document.write(number_format(${s2_untrim}, 0, '.', ' '))</script> inner reads (${s2_untrim_pct})</h4>
-		<p align=\"center\">original length<\br>without GATC</p>
+		<p align=\"center\"><ul><li>original length</li><li>without GATC</li></ul></p>
 		</div>
 		<div class=\"span4\" style=\"background-color: #448f30\">
 		<h4 align=\"center\"><script>document.write(number_format(${s5_summary_gatcs}, 0, '.', ' '))</script> edge reads (${s5_summary_gatcs_pct})</h4>
-		<p align=\"center\">original length with edge GATC(s) & truncated<\br>with GATC(s) at the edge(s)</p>
+		<p align=\"center\"><ul><li>original length with edge GATC(s) & truncated</li><li>with GATC(s) at the edge(s)</li></ul></p>
 		</div>
 		<div class=\"span4\" style=\"color: #f10026\">
 		<h4 align=\"center\"><script>document.write(number_format(${s5_trash_reads}, 0, '.', ' '))</script> trash reads (${s5_trash_reads_pct})</h4>
-		<p align=\"center\">too short after removal of adapters<\br>no GATC(s) after removal of adapters<\br>contain inner GATS(s)</p>
+		<p align=\"center\"><ul><li>too short after removal of adapters</li><li>no GATC(s) after removal of adapters</li><li>contain inner GATS(s)</li></ul></p>
 		</div>
 		</div>
 
