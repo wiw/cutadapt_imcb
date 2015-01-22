@@ -1,7 +1,7 @@
 #!/bin/bash
-FASTQ_FILES=/home/anton/backup/input/*.fastq.gz # расположение исходных файлов
+FASTQ_FILES=/home/anton/backup/tinput/*.fastq.gz # расположение исходных файлов
 FASTX_REVCOM=fastx_reverse_complement 
-DIR=/home/anton/backup/output # папка куда будет всё складываться
+DIR=/home/anton/backup/tpoutput # папка куда будет всё складываться
 #OUT=/home/anton/backup/output # папка куда будут перемещаться данные
 DSCR=/home/anton/data/cutadapt/damid_description.csv # расположение файла описаний
 
@@ -124,6 +124,7 @@ for fq in ${FASTQ_FILES}; do
 # Удаление внутренних ридов в файле с краевыми GATC's
 		pre=`head -n 1 $basef/interim_gatcs_${fq_base}.fastq | cut -c 1-2`
 		grep -E -v '.+(GATC)+.+' $basef/interim_gatcs_${fq_base}.fastq | sed "/^$pre/ { N; /\n+/ { N; d } }" > $basef/summary_gatcs_${fq_base}.fastq
+#sed -r "s/.+(GATC)+.+/empty sequence/" $basef/interim_gatcs_${fq_base}.fastq | sed "/^$pre/ {N; /empty sequence/ { N; /\n+$/ { N; d } } }" > $basef/summary_gatcs_${fq_base}.fastq
 
 # Объявление итоговых результатов и подстчет процентов
 		s4_interim_gatcs=`grep "^\+$" $basef/interim_gatcs_${fq_base}.fastq | wc -l`
@@ -277,7 +278,7 @@ for fq in ${FASTQ_FILES}; do
 		</html>" > $stats/${fq_human}_report.html
 
 
-		rm $len9/inner*.fastq $len9/output*.fastq $len9/sed_*.fastq $olen/inner*.fastq $olen/output*.fastq $olen/sed_*.fastq $basef/out*.fastq $basef/untrim_out.fastq $basef/untrim_out_gatcs_orig_len.fastq $basef/interim_gatcs_${fq_base}.fastq
+		#rm $len9/inner*.fastq $len9/output*.fastq $len9/sed_*.fastq $olen/inner*.fastq $olen/output*.fastq $olen/sed_*.fastq $basef/out*.fastq $basef/untrim_out.fastq $basef/untrim_out_gatcs_orig_len.fastq $basef/interim_gatcs_${fq_base}.fastq
 #mv $basef $OUT
 } &
 done
