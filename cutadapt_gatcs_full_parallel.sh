@@ -89,18 +89,20 @@ for fq in ${FASTQ_FILES}; do
 		i=$((13-$((${count}-4)))) # start from 12 Считаю число оснований, которые нужно удалить от оригинального адаптера
 		adptr5=`echo $ADPTR_SHORT_5 | sed -e 's/^.\{'$i'\}//'` # Удаляю основания от адаптера с 5' конца
 		adptr3=`echo $ADPTR_SHORT_3 | sed -e 's/.\{'$i'\}$//'` # Удаляю основания от адаптера с 3' конца
+		adptr_len=${#adptr5} # Считаем длину адаптера
 
 # search gatcs from reads w/o adapters, with gatcs, length >= 9. Поиск отстоящих GATC фрагментов на ридах без адаптеров, длиной не менее 9 оснований
 		cutadapt -g "^${adptr5}GATC" -a "GATC${adptr3}$" -O $count -e 0.01 --no-trim --untrimmed-output $len9/inner$((${count}-4))-gatcs.fastq $len9/inner$((${count}-5))-gatcs.fastq -o $len9/output$((${count}-4))-gatcs.fastq > $stats/clip_len9_gatcs${count}.stats
 
-# Удаление огрызков адаптера для найденых ридов и вывод в отдельных файл 
-		cat $len9/output$((${count}-4))-gatcs.fastq | sed -e "s/^"$adptr5"GATC/GATC/" | sed -e "s/GATC"${adptr3}"$/GATC/" > $len9/sed_output${count}-gatcs.fastq
-
+# Удаление огрызков адаптера а также удаление такого же количества символов в строке с качеством для найденых ридов и вывод в отдельных файл 
+#cat $len9/output$((${count}-4))-gatcs.fastq | sed -e "s/^"$adptr5"GATC/GATC/" | sed -e "s/GATC"${adptr3}"$/GATC/" > $len9/sed_output${count}-gatcs.fastq
+		cat $len9/output$((${count}-4))-gatcs.fastq | sed  "s/^"${adptr5}"GATC/GATC/" | sed "n;n;n;s/^.\{"${adptr_len}"\}//" | sed "s/GATC"${adptr3}"$/GATC/" | sed "n;n;n;s/.\{"${adptr_len}"\}$//" 
 # search gatcs from reads with gatcs, original length. Поиск отстоящих GATC фрагментов на ридах без адаптеров, оригинальной длины
 		cutadapt -g "^${adptr5}GATC" -a "GATC${adptr3}$" -O $count -e 0.01 --no-trim --untrimmed-output $olen/inner$((${count}-4))-gatcs.fastq $olen/inner$((${count}-5))-gatcs.fastq -o $olen/output$((${count}-4))-gatcs.fastq > $stats/clip_orig_len_gatcs${count}.stats
 
 # Удаление огрызков адаптера для найденых ридов и вывод в отдельных файл 
-		cat $olen/output$((${count}-4))-gatcs.fastq | sed -e "s/^"$adptr5"GATC/GATC/" | sed -e "s/GATC"${adptr3}"$/GATC/" > $olen/sed_output${count}-gatcs.fastq
+#cat $olen/output$((${count}-4))-gatcs.fastq | sed -e "s/^"$adptr5"GATC/GATC/" | sed -e "s/GATC"${adptr3}"$/GATC/" > $olen/sed_output${count}-gatcs.fastq
+		cat $olen/output$((${count}-4))-gatcs.fastq | sed "s/^"${adptr5}"GATC/GATC/" | sed "n;n;n;s/^.\{"${adptr_len}"\}//" | sed "s/GATC"${adptr3}"$/GATC/" | sed "n;n;n;s/.\{"${adptr_len}"\}$//" 
 
 		s3_input_trim_reads=`grep "Processed reads" $stats/clip_len9_gatcs${count}.stats | sed 's/^[a-zA-Z ^t:]*//'`
 		s3_match_trim_reads=`grep "Matched reads" $stats/clip_len9_gatcs${count}.stats | sed 's/^[a-zA-Z ^t:]*//;s/[%()0-9.]*$//;s/[ ^]*$//'`
@@ -123,10 +125,10 @@ for fq in ${FASTQ_FILES}; do
 
 # Удаление внутренних ридов в файле с краевыми GATC's
 		pre=`head -n 1 $basef/interim_gatcs_${fq_base}.fastq | cut -c 1-2`
-		grep -E -v '.+(GATC)+.+' $basef/interim_gatcs_${fq_base}.fastq | sed "/^$pre/ { N; /\n+/ { N; d } }" > $basef/summary_gatcs_${fq_base}.fastq
-#sed -r "s/.+(GATC)+.+/empty sequence/" $basef/interim_gatcs_${fq_base}.fastq | sed "/^$pre/ {N; /empty sequence/ { N; /\n+$/ { N; d } } }" > $basef/summary_gatcs_${fq_base}.fastq
+#grep -E -v '.+(GATC)+.+' $basef/interim_gatcs_${fq_base}.fastq | sed "/^$pre/ { N; /\n+/ { N; d } }" > $basef/summary_gatcs_${fq_base}.fastq
+		sed -r "s/.+(GATC)+.+/empty sequence/" $basef/interim_gatcs_${fq_base}.fastq | sed "/^$pre/ {N; /empty sequence/ { N; /\n+$/ { N; d } } }" > $basef/summary_gatcs_${fq_base}.fastq
 
-# Объявление итоговых результатов и подстчет процентов
+# Объявление итоговых результатов и подсчет процентов
 		s4_interim_gatcs=`grep "^\+$" $basef/interim_gatcs_${fq_base}.fastq | wc -l`
 		s4_interim_gatcs_pct=`bc <<< "scale=4; a=$s0_reads; b=$s4_interim_gatcs; (b/a)*100" | sed 's/[0].$//'`%
 
