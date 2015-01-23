@@ -1,7 +1,7 @@
 #!/bin/bash
-FASTQ_FILES=/home/anton/backup/tinput/*.fastq.gz # расположение исходных файлов
+FASTQ_FILES=$1/*.fastq.gz #/home/anton/backup/tinput/*.fastq.gz # расположение исходных файлов
 FASTX_REVCOM=fastx_reverse_complement 
-DIR=/home/anton/backup/tpoutput # папка куда будет всё складываться
+DIR=$2 #/home/anton/backup/tpoutput # папка куда будет всё складываться
 #OUT=/home/anton/backup/output # папка куда будут перемещаться данные
 DSCR=/home/anton/data/cutadapt/damid_description.csv # расположение файла описаний
 
@@ -96,13 +96,14 @@ for fq in ${FASTQ_FILES}; do
 
 # Удаление огрызков адаптера а также удаление такого же количества символов в строке с качеством для найденых ридов и вывод в отдельных файл 
 #cat $len9/output$((${count}-4))-gatcs.fastq | sed -e "s/^"$adptr5"GATC/GATC/" | sed -e "s/GATC"${adptr3}"$/GATC/" > $len9/sed_output${count}-gatcs.fastq
-		cat $len9/output$((${count}-4))-gatcs.fastq | sed  "s/^"${adptr5}"GATC/GATC/" | sed "n;n;n;s/^.\{"${adptr_len}"\}//" | sed "s/GATC"${adptr3}"$/GATC/" | sed "n;n;n;s/.\{"${adptr_len}"\}$//" 
+		cat $len9/output$((${count}-4))-gatcs.fastq | sed  "s/^"${adptr5}"GATC/GATC/" | sed "n;n;n;s/^.\{"${adptr_len}"\}//" | sed "s/GATC"${adptr3}"$/GATC/" | sed "n;n;n;s/.\{"${adptr_len}"\}$//"  > $len9/sed_output${count}-gatcs.fastq
 # search gatcs from reads with gatcs, original length. Поиск отстоящих GATC фрагментов на ридах без адаптеров, оригинальной длины
 		cutadapt -g "^${adptr5}GATC" -a "GATC${adptr3}$" -O $count -e 0.01 --no-trim --untrimmed-output $olen/inner$((${count}-4))-gatcs.fastq $olen/inner$((${count}-5))-gatcs.fastq -o $olen/output$((${count}-4))-gatcs.fastq > $stats/clip_orig_len_gatcs${count}.stats
 
 # Удаление огрызков адаптера для найденых ридов и вывод в отдельных файл 
 #cat $olen/output$((${count}-4))-gatcs.fastq | sed -e "s/^"$adptr5"GATC/GATC/" | sed -e "s/GATC"${adptr3}"$/GATC/" > $olen/sed_output${count}-gatcs.fastq
-		cat $olen/output$((${count}-4))-gatcs.fastq | sed "s/^"${adptr5}"GATC/GATC/" | sed "n;n;n;s/^.\{"${adptr_len}"\}//" | sed "s/GATC"${adptr3}"$/GATC/" | sed "n;n;n;s/.\{"${adptr_len}"\}$//" 
+		cat $olen/output$((${count}-4))-gatcs.fastq | sed "s/^"${adptr5}"GATC/GATC/" | sed "n;n;n;s/^.\{"${adptr_len}"\}//" | sed "s/GATC"${adptr3}"$/GATC/" | sed "n;n;n;s/.\{"${adptr_len}"\}$//"  > $olen/sed_output${count}-gatcs.fastq
+
 
 		s3_input_trim_reads=`grep "Processed reads" $stats/clip_len9_gatcs${count}.stats | sed 's/^[a-zA-Z ^t:]*//'`
 		s3_match_trim_reads=`grep "Matched reads" $stats/clip_len9_gatcs${count}.stats | sed 's/^[a-zA-Z ^t:]*//;s/[%()0-9.]*$//;s/[ ^]*$//'`
@@ -143,6 +144,9 @@ for fq in ${FASTQ_FILES}; do
 
 		s5_trash_reads=$((${s4_interim_gatcs}-${s5_summary_gatcs}+${s4_interim_trash_reads}))
 		s5_trash_reads_pct=`bc <<< "scale=4; a=$s0_reads; b=$s5_trash_reads; (b/a)*100" | sed 's/[0].$//'`%
+# Make text statistic in csv file
+echo "Data.set;fastq.file;Total.number.of.reads.obtained;Without.GATCs.original.length;With.edge.GATCs;Cutadapt.Trash;Sum;Sum-Total.number.of.reads.obtained;Without.GATCs.original.length.Percentage;With.edge.GATCs.Percentage;Cutadapt.Trash.Percentage" > $DIR/statistics.csv
+echo "$fq_human;$fq_base;$s0_reads;$s2_untrim;$s5_summary_gatcs;$s5_trash_reads;$(($s2_untrim+$s5_summary_gatcs+$s5_trash_reads));$(($s0_reads-$(($s2_untrim+$s5_summary_gatcs+$s5_trash_reads))));${s2_untrim_pct%\%};${s5_summary_gatcs_pct%\%};${s5_trash_reads_pct%\%}" >> $DIR/statistics.csv
 
 		echo "
 		<!DOCTYPE html>
