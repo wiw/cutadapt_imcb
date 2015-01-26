@@ -1,50 +1,54 @@
 #!/bin/bash
-FASTQ_FILES=$1/*.fastq.gz #/home/anton/backup/tinput/*.fastq.gz # расположение исходных файлов
-FASTX_REVCOM=fastx_reverse_complement 
-DIR=$2 #/home/anton/backup/tpoutput # папка куда будет всё складываться
-#OUT=/home/anton/backup/output # папка куда будут перемещаться данные
-DSCR=/home/anton/data/cutadapt/damid_description.csv # расположение файла описаний
+FASTQ_FILES=$1/*.fastq.gz # Source data in fastq.gz format
+FASTX_REVCOM=fastx_reverse_complement # path to fastx_reverse_complement
+DIR=$2 # Output dir
+#OUT=/home/anton/backup/output # If we have fast SSD with big volume space then output dir may be folder to SSD, and $OUT folder may be locate on big HDD. Data at first are recorded on SSD then move to HDD. This option disabled by default.
+DSCR=/home/anton/data/cutadapt/damid_description.csv # path to description file which establishes a correspondence between the file name and its human-readable name.
 
-# Определяем адаптеры
+# Define adapters
 ADPTR_SHORT_5="GGTCGCGGCCGAG"
 ADPTR_SHORT_3=`echo -e ">\n${ADPTR_SHORT_5}" | ${FASTX_REVCOM} | awk 'NR > 1'` #CTCGGCCGCGACC
 ILLUMINA_5="GCTCTTCCGATCT"
 ILLUMINA_3=`echo -e ">\n${ILLUMINA_5}" | ${FASTX_REVCOM} | awk 'NR > 1'` #AGATCGGAAGAGC
 
-# Для каждого файла из FASTQ_FILES выполняется следующая конструкция
+# Start statistic record
+echo "Data.set;fastq.file;Total.number.of.reads.obtained;Without.GATCs.original.length;With.edge.GATCs;Cutadapt.Trash;Sum;Sum-Total.number.of.reads.obtained;Without.GATCs.original.length.Percentage;With.edge.GATCs.Percentage;Cutadapt.Trash.Percentage" > $DIR/statistics.csv
+
+# For each file in FASTQ_FILES run this block 
 for fq in ${FASTQ_FILES}; do
 {
-	fq_base=`basename ${fq}` # Оставляем только имя файла
-		fq_human=`grep -w $fq_base $DSCR | sed "s/[a-zA-Z0-9_-.]*$//;s/	//"` # человекопонятное имя файла, берем из файла описаний
-		mkdir $DIR/${fq_base%.fastq.gz} # Создаем папку с именем файла, но без расширения
+	fq_base=`basename ${fq}` # save only file name
+		fq_human=`grep -w $fq_base $DSCR | sed "s/[a-zA-Z0-9_-.]*$//;s/	//"` # human-readable name in variable, get by parse $DSCR
+		mkdir $DIR/${fq_base%.fastq.gz} # make dir named as filename
 		basef=$DIR/${fq_base%.fastq.gz}
-	stats=$DIR/${fq_base%.fastq.gz}/stats
-		len9=$DIR/${fq_base%.fastq.gz}/len9 # Имя подпапки куда будет складываться весь результат для обрезанных ридов
-		olen=$DIR/${fq_base%.fastq.gz}/orig_len # Имя подпапки куда будет складываться весь результат для ридов оригинальной длины
+		stats=$DIR/${fq_base%.fastq.gz}/stats
+		len9=$DIR/${fq_base%.fastq.gz}/len9 # folder for cuted reads 
+		olen=$DIR/${fq_base%.fastq.gz}/orig_len # folder for uncuted reads
+# make folder defined on last step
 		mkdir $len9
 		mkdir $olen
 		mkdir $stats
-		count=5 # Соответствует длине адаптера с GATC фрагментом +1 основание (итого 5)
+		count=5 # some variables corresponds to the length of the adapter with a fragment of one GATC base (5 total)
 
-# Main trim reads. Обработка cutadapt со следующими параметрами: 5' & 3' адаптеры встречаются от 3-х и более раз, перекрытие от 9-ти и более оснований. Те риды где найдены адаптеры уходят в файл out.fastq, где не нашлись адаптеры - в файл untrim_out.fastq
+# Main trim reads. Processing cutadapt with the following parameters: 5 '& 3' adapters encountered from 3 or more times, the overlap of the adapter 9 or more bases. Those reads where found adapters write to file out.fastq, where there was no adapters write to file untrim_out.fastq 
 		cutadapt -g "${ADPTR_SHORT_5}" -g "${ILLUMINA_5}" -a "${ADPTR_SHORT_3}" -a "${ILLUMINA_3}" -n 3 -O 9 --match-read-wildcards --untrimmed-output $basef/untrim_out.fastq ${fq} -o $basef/out.fastq > $stats/clip_${fq_base%.fastq.gz}.stats
 
-# Remove reads smaller then 9 bp. Обрабатываю файл с отрезанными адаптерами - ищу GATC фрагменты в любом положении по ридам с минимальной длиной 9 оснований, ничего не отрезаю. Что нашлось уходит в файл out_wo_adapt_gatcs_len9.fastq, риды с меньшей длиной и/или без GATC уходят в мусорку
+# Remove reads smaller then 9 bp. Process files with truncated adapters - looking GATC fragments in any position by reads with a minimum length of 9 bases, do not cut off. That there was a goes into file out_wo_adapt_gatcs_len9.fastq, reads with smaller length and / or without GATC goes in the trash 
 		cutadapt -g "GATC" -a "GATC" -O 4 -m 9 --no-trim --untrimmed-output $basef/out_wo_adapt_wo_gatcs_small_len.fastq $basef/out.fastq -o $basef/out_wo_adapt_gatcs_len9.fastq > $stats/clip_len9_${fq_base%.fastq.gz}.stats
 
-# Sort reads in untrimmed reads by presence GATC's. Обрабатываю файл с ридами без адаптеров - также ищу GATC фрагменты. Ничего не отрезаю. Риды с фрагментами отправляются в файл untrim_out_gatcs_orig_len.fastq, без фрагментов идут в файл untrim_out_wo_gatcs_orig_len.fastq.
+# Sort reads in untrimmed reads by presence GATC's. Process files with reads without adapters - am also looking for GATC fragments. Nothing is cut off. Reads with fragments are sent to a file untrim_out_gatcs_orig_len.fastq, without going into the file fragments untrim_out_wo_gatcs_orig_len.fastq. 
 		cutadapt -g "GATC" -a "GATC" -O 4 --no-trim --untrimmed-output $basef/untrim_out_wo_gatcs_orig_len.fastq $basef/untrim_out.fastq -o $basef/untrim_out_gatcs_orig_len.fastq > $stats/clip_orig_len_${fq_base%.fastq.gz}.stats
 
-#Sort reads by edge and with shift from 1 to 9 bases of adapters. Этот блок кода вычленяет риды с GATC фрагментами на краях и на небольшом отступе от края - вплоть до 9-ти нуклеотидов из адаптера, как с прямой так и с обратной стороны.
+# Sort reads by edge and with shift from 1 to 9 bases of adapters. This block of code looking for reads with GATC fragments at the edges and slightly indented from the edge - up to 9 nucleotides from the adapter as a direct and the reverse side. 
 
-# Первоначальная обработка и поиск только крайних фрагментов из файла out_wo_adapt_gatcs_len9.fastq, перекрытие 4 основания, 1% ошибок
+# Initial processing and search only the edge of the file fragments out_wo_adapt_gatcs_len9.fastq, overlapping 4 base, 1% error
 		cutadapt -g "^GATC" -a "GATC$" -O 4 -e 0.01 --no-trim --untrimmed-output $len9/inner0-gatcs.fastq $basef/out_wo_adapt_gatcs_len9.fastq -o $len9/output0-gatcs.fastq > $stats/clip_len9_gatcs4.stats
 
-# Первоначальная обработка и поиск только крайних фрагментов из файла untrim_out_gatcs_orig_len.fastq, перекрытие 4 основания, 1% ошибок
+# Initial processing and search only the edge of the file fragments untrim_out_gatcs_orig_len.fastq, overlapping 4 base 1% error
 		cutadapt -g "^GATC" -a "GATC$" -O 4 -e 0.01 --no-trim --untrimmed-output $olen/inner0-gatcs.fastq $basef/untrim_out_gatcs_orig_len.fastq -o $olen/output0-gatcs.fastq > $stats/clip_orig_len_gatcs4.stats
 
 #############################
-### Переменные для отчета ###
+###  Variable for report  ###
 #############################
 		s0_reads=`grep "Processed reads" $stats/clip_${fq_base%.fastq.gz}.stats | sed 's/^[a-zA-Z ^t:]*//'`
 
@@ -53,8 +57,6 @@ for fq in ${FASTQ_FILES}; do
 
 		s2_trim_gatcs=`grep "^\+$" $basef/out_wo_adapt_gatcs_len9.fastq | wc -l`
 		s2_untrim_trash_gatcs=`grep "^\+$" $basef/out_wo_adapt_wo_gatcs_small_len.fastq | wc -l`
-#s2_rem_too_short=`grep "Too short reads" $stats/clip_len9_${fq_base%.fastq.gz}.stats | sed 's/^[a-zA-Z ^t:]*//;s/[%)0-9.a-z ]*$//;s/[( ]*$//'`
-#s2_rem_match_reads=`grep "Matched reads" $stats/clip_len9_${fq_base%.fastq.gz}.stats | sed 's/^[a-zA-Z ^t:]*//;s/[%()0-9.]*$//;s/[ ^]*$//'`
 		s2_trash_reads=$(($s1_trim-$s2_trim_gatcs))
 		s2_untrim_gatc=`grep "Matched reads" $stats/clip_orig_len_${fq_base%.fastq.gz}.stats | sed 's/^[a-zA-Z ^t:]*//;s/[%()0-9.]*$//;s/[ ^]*$//'`
 		s2_untrim=$(($s1_untrim-$s2_untrim_gatc))
@@ -70,8 +72,6 @@ for fq in ${FASTQ_FILES}; do
 		s1_untrim_pct=`bc <<< "scale=4; a=$s0_reads; b=$s1_untrim; (b/a)*100" | sed 's/[0].$//'`%
 		s2_trim_gatcs_pct=`bc <<< "scale=4; a=$s0_reads; b=$s2_trim_gatcs; (b/a)*100" | sed 's/[0].$//'`%
 		s2_untrim_trash_gatcs_pct=`bc <<< "scale=4; a=$s0_reads; b=$s2_untrim_trash_gatcs; (b/a)*100" | sed 's/[0].$//'`%
-#s2_rem_too_short_pct=`bc <<< "scale=4; a=$s0_reads; b=$s2_rem_too_short; (b/a)*100" | sed 's/[0].$//'`%
-#s2_rem_match_reads_pct=`bc <<< "scale=4; a=$s0_reads; b=$s2_rem_match_reads; (b/a)*100" | sed 's/[0].$//'`%
 		s2_trash_reads_pct=`bc <<< "scale=4; a=$s0_reads; b=$s2_trash_reads; (b/a)*100" | sed 's/[0].$//'`%
 		s2_untrim_gatc_pct=`bc <<< "scale=4; a=$s0_reads; b=$s2_untrim_gatc; (b/a)*100" | sed 's/[0].$//'`%
 		s2_untrim_pct=`bc <<< "scale=4; a=$s0_reads; b=$s2_untrim; (b/a)*100" | sed 's/[0].$//'`%
@@ -80,31 +80,34 @@ for fq in ${FASTQ_FILES}; do
 		s3_match_trim_reads_pct=`bc <<< "scale=4; a=$s0_reads; b=$s3_match_trim_reads; (b/a)*100" | sed 's/[0].$//'`%
 		s3_input_untrim_reads_pct=`bc <<< "scale=4; a=$s0_reads; b=$s3_input_untrim_reads; (b/a)*100" | sed 's/[0].$//'`%
 		s3_match_untrim_reads_pct=`bc <<< "scale=4; a=$s0_reads; b=$s3_match_untrim_reads; (b/a)*100" | sed 's/[0].$//'`%
+#############################
 
+# record statistic to temporary file
 		echo "<tr><td>GATC</td><td><script>document.write(number_format(${s3_input_trim_reads}, 0, '.', ' '))</script> (${s3_input_trim_reads_pct})</td><td><script>document.write(number_format(${s3_match_trim_reads}, 0, '.', ' '))</script> (${s3_match_trim_reads_pct})</td></tr>" >> $stats/len9.txt
 		echo "<tr><td>GATC</td><td><script>document.write(number_format(${s3_input_untrim_reads}, 0, '.', ' '))</script> (${s3_input_untrim_reads_pct})</td><td><script>document.write(number_format(${s3_match_untrim_reads}, 0, '.', ' '))</script> (${s3_match_untrim_reads_pct})</td></tr>" >> $stats/orig_len.txt
 
-# Запуск цикла в котором идет поиск фрагментов GATC отстоящих от края рида на 1, 2, 3 и так далее до 9-ти оснований
-		while [ $count -le 13 ]; do # 4 + 9 = 13 длина короткого адаптера 
-		i=$((13-$((${count}-4)))) # start from 12 Считаю число оснований, которые нужно удалить от оригинального адаптера
-		adptr5=`echo $ADPTR_SHORT_5 | sed -e 's/^.\{'$i'\}//'` # Удаляю основания от адаптера с 5' конца
-		adptr3=`echo $ADPTR_SHORT_3 | sed -e 's/.\{'$i'\}$//'` # Удаляю основания от адаптера с 3' конца
-		adptr_len=${#adptr5} # Считаем длину адаптера
+# Starting cycle in which the search for fragments GATC spaced from the edge read at 1, 2, 3 and so on up to 9 bases
+		while [ $count -le 13 ]; do # 4 + 9 = 13 length of short adapter 
+		i=$((13-$((${count}-4)))) # start from 12 calculation of the number of bases to be removed from the original adapter 
+		adptr5=`echo $ADPTR_SHORT_5 | sed -e 's/^.\{'$i'\}//'` # Remove nt from adapter 5' end
+		adptr3=`echo $ADPTR_SHORT_3 | sed -e 's/.\{'$i'\}$//'` # Remove nt from adapter 3' end
+		adptr_len=${#adptr5} # Calculate adpater length
 
-# search gatcs from reads w/o adapters, with gatcs, length >= 9. Поиск отстоящих GATC фрагментов на ридах без адаптеров, длиной не менее 9 оснований
+# search gatcs from reads w/o adapters, with gatcs, length >= 9
 		cutadapt -g "^${adptr5}GATC" -a "GATC${adptr3}$" -O $count -e 0.01 --no-trim --untrimmed-output $len9/inner$((${count}-4))-gatcs.fastq $len9/inner$((${count}-5))-gatcs.fastq -o $len9/output$((${count}-4))-gatcs.fastq > $stats/clip_len9_gatcs${count}.stats
 
-# Удаление огрызков адаптера а также удаление такого же количества символов в строке с качеством для найденых ридов и вывод в отдельных файл 
-#cat $len9/output$((${count}-4))-gatcs.fastq | sed -e "s/^"$adptr5"GATC/GATC/" | sed -e "s/GATC"${adptr3}"$/GATC/" > $len9/sed_output${count}-gatcs.fastq
+# Removal section of the adapter as well as the removal of the same number of nucleotides in line with the quality of the found reads and output in a separate file 
 		cat $len9/output$((${count}-4))-gatcs.fastq | sed  "s/^"${adptr5}"GATC/GATC/" | sed "n;n;n;s/^.\{"${adptr_len}"\}//" | sed "s/GATC"${adptr3}"$/GATC/" | sed "n;n;n;s/.\{"${adptr_len}"\}$//"  > $len9/sed_output${count}-gatcs.fastq
-# search gatcs from reads with gatcs, original length. Поиск отстоящих GATC фрагментов на ридах без адаптеров, оригинальной длины
+
+# search gatcs from reads with gatcs, original length
 		cutadapt -g "^${adptr5}GATC" -a "GATC${adptr3}$" -O $count -e 0.01 --no-trim --untrimmed-output $olen/inner$((${count}-4))-gatcs.fastq $olen/inner$((${count}-5))-gatcs.fastq -o $olen/output$((${count}-4))-gatcs.fastq > $stats/clip_orig_len_gatcs${count}.stats
 
-# Удаление огрызков адаптера для найденых ридов и вывод в отдельных файл 
-#cat $olen/output$((${count}-4))-gatcs.fastq | sed -e "s/^"$adptr5"GATC/GATC/" | sed -e "s/GATC"${adptr3}"$/GATC/" > $olen/sed_output${count}-gatcs.fastq
+# Removal section of the adapter as well as the removal of the same number of nucleotides in line with the quality of the found reads and output in a separate file 
 		cat $olen/output$((${count}-4))-gatcs.fastq | sed "s/^"${adptr5}"GATC/GATC/" | sed "n;n;n;s/^.\{"${adptr_len}"\}//" | sed "s/GATC"${adptr3}"$/GATC/" | sed "n;n;n;s/.\{"${adptr_len}"\}$//"  > $olen/sed_output${count}-gatcs.fastq
 
-
+#############################
+###  Variable for report  ###
+#############################
 		s3_input_trim_reads=`grep "Processed reads" $stats/clip_len9_gatcs${count}.stats | sed 's/^[a-zA-Z ^t:]*//'`
 		s3_match_trim_reads=`grep "Matched reads" $stats/clip_len9_gatcs${count}.stats | sed 's/^[a-zA-Z ^t:]*//;s/[%()0-9.]*$//;s/[ ^]*$//'`
 		s3_input_untrim_reads=`grep "Processed reads" $stats/clip_orig_len_gatcs${count}.stats | sed 's/^[a-zA-Z ^t:]*//'`
@@ -114,22 +117,26 @@ for fq in ${FASTQ_FILES}; do
 		s3_match_trim_reads_pct=`bc <<< "scale=4; a=$s0_reads; b=$s3_match_trim_reads; (b/a)*100" | sed 's/[0].$//'`%
 		s3_input_untrim_reads_pct=`bc <<< "scale=4; a=$s0_reads; b=$s3_input_untrim_reads; (b/a)*100" | sed 's/[0].$//'`%
 		s3_match_untrim_reads_pct=`bc <<< "scale=4; a=$s0_reads; b=$s3_match_untrim_reads; (b/a)*100" | sed 's/[0].$//'`%
+#############################
 
+# record statistic to temporary file
 		echo "<tr><td>${adptr5}GATC</td><td><script>document.write(number_format(${s3_input_trim_reads}, 0, '.', ' '))</script> (${s3_input_trim_reads_pct})</td><td><script>document.write(number_format(${s3_match_trim_reads}, 0, '.', ' '))</script> (${s3_match_trim_reads_pct})</td></tr>" >> $stats/len9.txt
 		echo "<tr><td>${adptr5}GATC</td><td><script>document.write(number_format(${s3_input_untrim_reads}, 0, '.', ' '))</script> (${s3_input_untrim_reads_pct})</td><td><script>document.write(number_format(${s3_match_untrim_reads}, 0, '.', ' '))</script> (${s3_match_untrim_reads_pct})</td></tr>" >> $stats/orig_len.txt
 
-		count=$(($count+1)) # 6 Увеличиваю счетчик на единицу
-		done
-# Объединение всех найденых ридов в один файл
-		cat $len9/output0-gatcs.fastq $len9/sed_output*-gatcs.fastq $olen/output0-gatcs.fastq $olen/sed_output*-gatcs.fastq > $basef/interim_gatcs_${fq_base}.fastq
-#cat $olen/output0-gatcs.fastq $olen/sed_output*-gatcs.fastq > $olen/untrim_${fq_base}.fastq
+		count=$(($count+1)) # Increment 
+		done # end of cycle
 
-# Удаление внутренних ридов в файле с краевыми GATC's
+
+# Combine all founded reads to one file
+		cat $len9/output0-gatcs.fastq $len9/sed_output*-gatcs.fastq $olen/output0-gatcs.fastq $olen/sed_output*-gatcs.fastq > $basef/interim_gatcs_${fq_base}.fastq
+
+# Remove reads with inner GATC's
 		pre=`head -n 1 $basef/interim_gatcs_${fq_base}.fastq | cut -c 1-2`
-#grep -E -v '.+(GATC)+.+' $basef/interim_gatcs_${fq_base}.fastq | sed "/^$pre/ { N; /\n+/ { N; d } }" > $basef/summary_gatcs_${fq_base}.fastq
 		sed -r "s/.+(GATC)+.+/empty sequence/" $basef/interim_gatcs_${fq_base}.fastq | sed "/^$pre/ {N; /empty sequence/ { N; /\n+$/ { N; d } } }" > $basef/summary_gatcs_${fq_base}.fastq
 
-# Объявление итоговых результатов и подсчет процентов
+#############################
+###  Variable for report  ###
+#############################
 		s4_interim_gatcs=`grep "^\+$" $basef/interim_gatcs_${fq_base}.fastq | wc -l`
 		s4_interim_gatcs_pct=`bc <<< "scale=4; a=$s0_reads; b=$s4_interim_gatcs; (b/a)*100" | sed 's/[0].$//'`%
 
@@ -144,10 +151,12 @@ for fq in ${FASTQ_FILES}; do
 
 		s5_trash_reads=$((${s4_interim_gatcs}-${s5_summary_gatcs}+${s4_interim_trash_reads}))
 		s5_trash_reads_pct=`bc <<< "scale=4; a=$s0_reads; b=$s5_trash_reads; (b/a)*100" | sed 's/[0].$//'`%
+#############################
+
 # Make text statistic in csv file
-echo "Data.set;fastq.file;Total.number.of.reads.obtained;Without.GATCs.original.length;With.edge.GATCs;Cutadapt.Trash;Sum;Sum-Total.number.of.reads.obtained;Without.GATCs.original.length.Percentage;With.edge.GATCs.Percentage;Cutadapt.Trash.Percentage" > $DIR/statistics.csv
 echo "$fq_human;$fq_base;$s0_reads;$s2_untrim;$s5_summary_gatcs;$s5_trash_reads;$(($s2_untrim+$s5_summary_gatcs+$s5_trash_reads));$(($s0_reads-$(($s2_untrim+$s5_summary_gatcs+$s5_trash_reads))));${s2_untrim_pct%\%};${s5_summary_gatcs_pct%\%};${s5_trash_reads_pct%\%}" >> $DIR/statistics.csv
 
+# Make visual statistic in html file
 		echo "
 		<!DOCTYPE html>
 		<html lang=\"en\">
@@ -283,9 +292,9 @@ echo "$fq_human;$fq_base;$s0_reads;$s2_untrim;$s5_summary_gatcs;$s5_trash_reads;
 		</body>
 		</html>" > $stats/${fq_human}_report.html
 
-
-		#rm $len9/inner*.fastq $len9/output*.fastq $len9/sed_*.fastq $olen/inner*.fastq $olen/output*.fastq $olen/sed_*.fastq $basef/out*.fastq $basef/untrim_out.fastq $basef/untrim_out_gatcs_orig_len.fastq $basef/interim_gatcs_${fq_base}.fastq
-#mv $basef $OUT
-} &
+# remove intermediate files
+		rm $len9/inner*.fastq $len9/output*.fastq $len9/sed_*.fastq $olen/inner*.fastq $olen/output*.fastq $olen/sed_*.fastq $basef/out*.fastq $basef/untrim_out.fastq $basef/untrim_out_gatcs_orig_len.fastq $basef/interim_gatcs_${fq_base}.fastq
+#mv $basef $OUT # If folder $OUT is defined then to move output data from $DIR to $OUT
+} & # all files are processed in parallel processes
 done
 wait
