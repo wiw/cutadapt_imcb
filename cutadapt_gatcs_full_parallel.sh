@@ -3,7 +3,7 @@ FASTQ_FILES=$1/*.fastq.gz # Source data in fastq.gz format
 FASTX_REVCOM=fastx_reverse_complement # path to fastx_reverse_complement
 DIR=$2 # Output dir
 #OUT=/home/anton/backup/output # If we have fast SSD with big volume space then output dir may be folder to SSD, and $OUT folder may be locate on big HDD. Data at first are recorded on SSD then move to HDD. This option disabled by default.
-DSCR=/home/anton/data/cutadapt/damid_description.csv # path to description file which establishes a correspondence between the file name and its human-readable name.
+DSCR=/home/anton/data/DAM/RUN/damid_description.csv # path to description file which establishes a correspondence between the file name and its human-readable name.
 
 # Define adapters
 ADPTR_SHORT_5="GGTCGCGGCCGAG"
@@ -261,7 +261,7 @@ echo "$fq_human;$fq_base;$s0_reads;$s2_untrim;$s5_summary_gatcs;$s5_trash_reads;
 		<p align=\"center\"><ul><li>original length</li><li>without GATC</li></ul></p>
 		</div>
 		<div class=\"span4\" style=\"background-color: #448f30\">
-		<h4 align=\"center\"><script>document.write(number_format(${s4_interim_gatcs}, 0, '.', ' '))</script> edge reads (${s4_interim_gatcs_pct})</h4>
+		<h4 align=\"center\"><script>document.write(number_format(${s4_interim_gatcs}, 0, '.', ' '))</script> edge reads (${s4_ifnterim_gatcs_pct})</h4>
 		<p align=\"center\"><ul><li>original length with edge GATC(s) & truncated</li><li>with GATC(s) at the edge(s)</li></ul></p>
 		</div>
 		<div class=\"span4\" style=\"color: #f10026\">
@@ -290,10 +290,10 @@ echo "$fq_human;$fq_base;$s0_reads;$s2_untrim;$s5_summary_gatcs;$s5_trash_reads;
 		<footer><b><p>&copy; Laboratory of cell division IMCB SB RAS, Novosibirsk, 2014-2015</p></b></footer>
 		</div>
 		</body>
-		</html>" > $stats/${fq_human}_report.html
+		</html>" > $basef/${fq_human}_report.html
 
 # remove intermediate files
-		rm $len9/inner*.fastq $len9/output*.fastq $len9/sed_*.fastq $olen/inner*.fastq $olen/output*.fastq $olen/sed_*.fastq $basef/out*.fastq $basef/untrim_out.fastq $basef/untrim_out_gatcs_orig_len.fastq $basef/interim_gatcs_${fq_base}.fastq
+		rm -R $len9/* $olen/* $stats/* $basef/out*.fastq $basef/untrim_out.fastq $basef/untrim_out_gatcs_orig_len.fastq $basef/interim_gatcs_${fq_base}.fastq
 #mv $basef $OUT # If folder $OUT is defined then to move output data from $DIR to $OUT
 } & # all files are processed in parallel processes
 done
