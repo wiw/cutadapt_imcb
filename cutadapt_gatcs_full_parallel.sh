@@ -31,10 +31,10 @@ for fq in ${FASTQ_FILES}; do
 		count=5 # some variables corresponds to the length of the adapter with a fragment of one GATC base (5 total)
 
 # Main trim reads. Processing cutadapt with the following parameters: 5 '& 3' adapters encountered from 3 or more times, the overlap of the adapter 9 or more bases. Those reads where found adapters write to file out.fastq, where there was no adapters write to file untrim_out.fastq 
-		cutadapt -g "${ADPTR_SHORT_5}" -g "${ILLUMINA_5}" -a "${ADPTR_SHORT_3}" -a "${ILLUMINA_3}" -n 3 -O 9 --match-read-wildcards --untrimmed-output $basef/untrim_out.fastq ${fq} -o $basef/out.fastq > $stats/clip_${fq_base%.fastq.gz}.stats
+		cutadapt -g "${ADPTR_SHORT_5}" -g "${ILLUMINA_5}" -a "${ADPTR_SHORT_3}" -a "${ILLUMINA_3}" -n 3 -O 9 --match-read-wildcards --untrimmed-output $basef/untrim_out.fastq --too-short $basef/s1-too-short.fastq ${fq} -o $basef/out.fastq > $stats/clip_${fq_base%.fastq.gz}.stats
 
 # Remove reads smaller then 9 bp. Process files with truncated adapters - looking GATC fragments in any position by reads with a minimum length of 9 bases, do not cut off. That there was a goes into file out_wo_adapt_gatcs_len9.fastq, reads with smaller length and / or without GATC goes in the trash 
-		cutadapt -g "GATC" -a "GATC" -O 4 -m 9 --no-trim --untrimmed-output $basef/out_wo_adapt_wo_gatcs_small_len.fastq $basef/out.fastq -o $basef/out_wo_adapt_gatcs_len9.fastq > $stats/clip_len9_${fq_base%.fastq.gz}.stats
+		cutadapt -g "GATC" -a "GATC" -O 4 -m 9 --no-trim --untrimmed-output $basef/out_wo_adapt_wo_gatcs_small_len.fastq --too-short $basef/s2-too-short.fastq $basef/out.fastq -o $basef/out_wo_adapt_gatcs_len9.fastq > $stats/clip_len9_${fq_base%.fastq.gz}.stats
 
 # Sort reads in untrimmed reads by presence GATC's. Process files with reads without adapters - am also looking for GATC fragments. Nothing is cut off. Reads with fragments are sent to a file untrim_out_gatcs_orig_len.fastq, without going into the file fragments untrim_out_wo_gatcs_orig_len.fastq. 
 		cutadapt -g "GATC" -a "GATC" -O 4 --no-trim --untrimmed-output $basef/untrim_out_wo_gatcs_orig_len.fastq $basef/untrim_out.fastq -o $basef/untrim_out_gatcs_orig_len.fastq > $stats/clip_orig_len_${fq_base%.fastq.gz}.stats
@@ -266,7 +266,7 @@ echo "$fq_human;$fq_base;$s0_reads;$s2_untrim;$s5_summary_gatcs;$s5_trash_reads;
 		</div>
 		<div class=\"span4\" style=\"color: #f10026\">
 		<h4 align=\"center\"><script>document.write(number_format(${s4_interim_trash_reads}, 0, '.', ' '))</script> trash reads (${s4_interim_trash_reads_pct})</h4>
-		<p align=\"center\"><ul><li>too short after removal of adapters</li><li>no GATC(s) after removal of adapters</li><li>contain inner GATS(s)</li></ul></p>
+		<p align=\"center\"><ul><li>too short after removal of adapters</li><li>no GATC(s) after removal of adapters</li><li>contain inner GATC(s)</li></ul></p>
 		</div>
 		</div>
 		<p>&nbsp;</p>
@@ -282,7 +282,7 @@ echo "$fq_human;$fq_base;$s0_reads;$s2_untrim;$s5_summary_gatcs;$s5_trash_reads;
 		</div>
 		<div class=\"span4\" style=\"color: #f10026\">
 		<h4 align=\"center\"><script>document.write(number_format(${s5_trash_reads}, 0, '.', ' '))</script> trash reads (${s5_trash_reads_pct})</h4>
-		<p align=\"center\"><ul><li>too short after removal of adapters</li><li>no GATC(s) after removal of adapters</li><li>contain inner GATS(s)</li></ul></p>
+		<p align=\"center\"><ul><li>too short after removal of adapters</li><li>no GATC(s) after removal of adapters</li><li>contain inner GATC(s)</li></ul></p>
 		</div>
 		</div>
 
@@ -293,7 +293,7 @@ echo "$fq_human;$fq_base;$s0_reads;$s2_untrim;$s5_summary_gatcs;$s5_trash_reads;
 		</html>" > $basef/${fq_human}_report.html
 
 # remove intermediate files
-		rm -R $len9/* $olen/* $stats/* $basef/out*.fastq $basef/untrim_out.fastq $basef/untrim_out_gatcs_orig_len.fastq $basef/interim_gatcs_${fq_base}.fastq
+#		rm -R $len9/* $olen/* $stats/* $basef/out*.fastq $basef/untrim_out.fastq $basef/untrim_out_gatcs_orig_len.fastq $basef/interim_gatcs_${fq_base}.fastq
 #mv $basef $OUT # If folder $OUT is defined then to move output data from $DIR to $OUT
 } & # all files are processed in parallel processes
 done
