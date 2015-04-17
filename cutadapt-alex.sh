@@ -47,8 +47,8 @@ for fq in ${FASTQ_FILES}; do
 # Initial processing and search only the edge of the file fragments untrim_out_gatcs_orig_len.fastq, overlapping 4 base 1% error
 		cutadapt -g "^GTCGCGGCCGAGGATC" -a "GATCGCTCTTCCGATC$" -O 16 -e 0.01 --no-trim --untrimmed-output $olen/inner12-gatcs.fastq $basef/untrim_out_gatcs_orig_len.fastq -o $olen/output12-gatcs.fastq > $stats/clip_orig_len_gatcs12.stats
 
-	cat $len9/output12-gatcs.fastq | sed  "s/^GTCGCGGCCGAGGATC/GATC/" | sed "n;n;n;s/^.\{12\}//" | sed "s/GATCGCTCTTCCGATC$/GATC/" | sed "n;n;n;s/.\{"${adptr_len}"\}$//"  > $len9/sed_output12-gatcs.fastq
-	cat $olen/output12-gatcs.fastq | sed  "s/^GTCGCGGCCGAGGATC/GATC/" | sed "n;n;n;s/^.\{12\}//" | sed "s/GATCGCTCTTCCGATC$/GATC/" | sed "n;n;n;s/.\{"${adptr_len}"\}$//"  > $olen/sed_output12-gatcs.fastq
+	cat $len9/output12-gatcs.fastq | sed  "s/^GTCGCGGCCGAGGATC/GATC/" | sed "n;n;n;s/^.\{12\}//" | sed "s/GATCGCTCTTCCGATC$/GATC/" | sed "n;n;n;s/.\{12\}$//"  > $len9/sed_output12-gatcs.fastq
+	cat $olen/output12-gatcs.fastq | sed  "s/^GTCGCGGCCGAGGATC/GATC/" | sed "n;n;n;s/^.\{12\}//" | sed "s/GATCGCTCTTCCGATC$/GATC/" | sed "n;n;n;s/.\{12\}$//"  > $olen/sed_output12-gatcs.fastq
 #############################
 ###  Variable for report  ###
 #############################

@@ -1,5 +1,5 @@
 #!/bin/bash
-FASTQ_FILES=$1/*.fastq.gz # Source data in fastq.gz format
+FASTQ_FILES=$1/*.fastq #.gz # Source data in fastq.gz format
 FASTX_REVCOM=fastx_reverse_complement # path to fastx_reverse_complement
 DIR=$2 # Output dir
 #OUT=/home/anton/backup/output # If we have fast SSD with big volume space then output dir may be folder to SSD, and $OUT folder may be locate on big HDD. Data at first are recorded on SSD then move to HDD. This option disabled by default.
@@ -253,7 +253,7 @@ echo "$fq_human;$fq_base;$s0_reads;$s2_untrim;$s5_summary_gatcs;$s5_trash_reads;
 		</html>" > $basef/${fq_human}_report.html
 
 # remove intermediate files
-#		rm -R $len9/* $olen/* $stats/* $basef/out*.fastq $basef/untrim_out.fastq $basef/untrim_out_gatcs_orig_len.fastq $basef/interim_gatcs_${fq_base}.fastq
+		rm -R $len9/* $olen/* $stats/* $basef/out*.fastq $basef/untrim_out.fastq $basef/untrim_out_gatcs_orig_len.fastq $basef/interim_gatcs_${fq_base}.fastq
 #mv $basef $OUT # If folder $OUT is defined then to move output data from $DIR to $OUT
 } & # all files are processed in parallel processes
 done
